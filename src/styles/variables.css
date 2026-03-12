@@ -1,0 +1,49 @@
+/* CSS Variables and Theme Colors */
+
+:root {
+  /* Colors */
+  --bg: #0a0a0f;
+  --surface: #14141f;
+  --surface-elevated: #1e1e2e;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --accent: #22d3ee;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: #2e2e3e;
+  --success: #10b981;
+  --danger: #ef4444;
+
+  /* Platform Colors */
+  --youtube: #ff0000;
+  --facebook: #1877f2;
+  --instagram: #e4405f;
+  --tiktok: #00f2ea;
+
+  /* Sizing */
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  /* Effects */
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --transition: 150ms ease-out;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

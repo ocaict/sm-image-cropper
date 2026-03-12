@@ -1,0 +1,16 @@
+/* Main CSS Entry Point - Imports all modular stylesheets */
+
+/* 1. Variables and Theme Colors */
+@import "./styles/variables.css";
+
+/* 2. Global Base Styles */
+@import "./styles/base.css";
+
+/* 3. Layout and Structure */
+@import "./styles/layout.css";
+
+/* 4. Component-specific Styles */
+@import "./styles/components.css";
+
+/* 5. Utility Classes and Effects */
+@import "./styles/utilities.css";
