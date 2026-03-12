@@ -24,6 +24,9 @@ self.onmessage = async (e) => {
     hAlign = "center",
     scalePosition = { x: 0, y: 0 },
     scaleZoom = 1,
+    adjustments = { brightness: 100, contrast: 100, saturation: 100 },
+    textLayers = [],
+    watermark = { image: null, opacity: 50, scale: 20, position: "bottom-right" },
   } = e.data;
 
   try {
@@ -32,6 +35,12 @@ self.onmessage = async (e) => {
 
     if (!ctx) {
       throw new Error("Failed to get 2d context for OffscreenCanvas");
+    }
+
+    // Apply image adjustments as CSS filter on the canvas
+    const { brightness = 100, contrast = 100, saturation = 100 } = adjustments;
+    if (brightness !== 100 || contrast !== 100 || saturation !== 100) {
+      ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
     }
 
     if (mode === "crop" && croppedAreaPixels) {
@@ -121,6 +130,7 @@ self.onmessage = async (e) => {
 
     // Draw Annotations
     if (paths && paths.length > 0) {
+      ctx.filter = "none"; // Reset filter before drawing annotations
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
@@ -182,6 +192,74 @@ self.onmessage = async (e) => {
         }
         ctx.stroke();
       });
+    }
+
+    // Draw Text Layers
+    if (textLayers && textLayers.length > 0) {
+      ctx.filter = "none";
+      textLayers.forEach((layer) => {
+        const fontSize = (layer.fontSize / 1000) * outputSize.width;
+        ctx.font = `${layer.fontWeight} ${fontSize}px ${layer.fontFamily}`;
+        ctx.fillStyle = layer.color;
+        ctx.textAlign = layer.textAlign;
+        ctx.textBaseline = "middle";
+
+        if (layer.shadow) {
+          ctx.shadowColor = "rgba(0,0,0,0.8)";
+          ctx.shadowBlur = 10;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+        } else {
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+        }
+
+        const x = (layer.x / 100) * outputSize.width;
+        const y = (layer.y / 100) * outputSize.height;
+
+        ctx.fillText(layer.text, x, y);
+        
+        // Reset shadow for next layer
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+      });
+    }
+
+    // Draw Watermark
+    if (watermark && watermark.image) {
+      try {
+        ctx.filter = "none";
+        const response = await fetch(watermark.image);
+        const blob = await response.blob();
+        const wmImg = await createImageBitmap(blob);
+        
+        const { opacity, scale, position } = watermark;
+        ctx.globalAlpha = opacity / 100;
+        
+        const wmWidth = outputSize.width * (scale / 100);
+        const wmHeight = (wmImg.height / wmImg.width) * wmWidth;
+        
+        let x = 20;
+        let y = 20;
+        
+        const parts = position.split("-");
+        const v = parts[0];
+        const h = parts[1] || "center";
+        
+        if (v === "top") y = 20;
+        else if (v === "bottom") y = outputSize.height - wmHeight - 20;
+        else if (v === "center") y = (outputSize.height - wmHeight) / 2;
+        
+        if (h === "left") x = 20;
+        else if (h === "right") x = outputSize.width - wmWidth - 20;
+        else if (h === "center") x = (outputSize.width - wmWidth) / 2;
+        
+        ctx.drawImage(wmImg, x, y, wmWidth, wmHeight);
+        ctx.globalAlpha = 1.0;
+        wmImg.close();
+      } catch (wmError) {
+        // Silently fail watermark if error occurs (e.g. invalid URL)
+      }
     }
 
     const type = format === "png" ? "image/png" : "image/jpeg";

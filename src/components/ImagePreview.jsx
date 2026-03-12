@@ -2,6 +2,71 @@ import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import Cropper from "react-easy-crop";
 import { calculateScalePlacement, calculateScalePlacementMemo } from "../utils/scaling";
 
+const DraggableText = ({
+  layer,
+  onUpdate,
+  containerWidth,
+  containerHeight,
+}) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
+
+  const handleMouseDown = (e) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startX: layer.x,
+      startY: layer.y,
+    };
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e) => {
+      const deltaX = ((e.clientX - dragStartRef.current.x) / containerWidth) * 100;
+      const deltaY = ((e.clientY - dragStartRef.current.y) / containerHeight) * 100;
+
+      onUpdate(layer.id, {
+        x: Math.max(0, Math.min(100, dragStartRef.current.startX + deltaX)),
+        y: Math.max(0, Math.min(100, dragStartRef.current.startY + deltaY)),
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, containerWidth, containerHeight, layer.id, onUpdate]);
+
+  return (
+    <div
+      className={`canvas-text-layer ${isDragging ? "dragging" : ""} ${layer.shadow ? "text-shadow-effect" : ""}`}
+      onMouseDown={handleMouseDown}
+      style={{
+        left: `${layer.x}%`,
+        top: `${layer.y}%`,
+        transform: `translate(${layer.textAlign === "center" ? "-50%" : layer.textAlign === "right" ? "-100%" : "0"}, ${layer.y > 90 ? "-100%" : "0"})`,
+        fontSize: `${(layer.fontSize / 1000) * containerWidth}px`,
+        color: layer.color,
+        fontFamily: layer.fontFamily,
+        fontWeight: layer.fontWeight,
+        textAlign: layer.textAlign,
+      }}
+    >
+      {layer.text}
+    </div>
+  );
+};
+
 // Calculate offset bounds based on alignment
 const calculateOffsetBounds = (previewPlacement, previewWidth, previewHeight) => {
   const { x: alignX, y: alignY, drawWidth, drawHeight } = previewPlacement;
@@ -34,6 +99,9 @@ const InteractiveScalePreview = memo(({
   customColor = "#000000",
   scaleZoom = 1,
   onScaleZoomChange,
+  adjustments = { brightness: 100, contrast: 100, saturation: 100 },
+  textLayers = [],
+  onTextLayerUpdate,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -237,11 +305,17 @@ const InteractiveScalePreview = memo(({
   }, [paddingStyle, customColor]);
 
   const getImageFilter = useCallback(() => {
-    if (paddingStyle === "blur") {
-      return "blur(4px)";
+    const { brightness = 100, contrast = 100, saturation = 100 } = adjustments;
+    const hasAdjustments = brightness !== 100 || contrast !== 100 || saturation !== 100;
+    const adjustFilter = hasAdjustments
+      ? `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`
+      : '';
+
+    if (paddingStyle === 'blur') {
+      return adjustFilter || 'none';
     }
-    return "none";
-  }, [paddingStyle]);
+    return adjustFilter || 'none';
+  }, [paddingStyle, adjustments]);
 
   const showBlurBackground = paddingStyle === "blur";
   const showExtendBackground = paddingStyle === "extend";
@@ -326,6 +400,17 @@ const InteractiveScalePreview = memo(({
           showGuidelines={showGuidelines}
           safeZonePercentage={safeZonePercentage}
         />
+
+        {/* Text Layers */}
+        {textLayers.map((layer) => (
+          <DraggableText
+            key={layer.id}
+            layer={layer}
+            onUpdate={onTextLayerUpdate}
+            containerWidth={previewWidth}
+            containerHeight={previewHeight}
+          />
+        ))}
       </div>
 
       {/* Scale mode zoom control with presets */}
@@ -507,8 +592,66 @@ const ImagePreview = ({
   customColor = "#000000",
   scaleZoom = 1,
   onScaleZoomChange,
+  adjustments = { brightness: 100, contrast: 100, saturation: 100 },
+  textLayers = [],
+  onTextLayerUpdate,
+  watermark,
 }) => {
   const aspect = outputSize.width / outputSize.height;
+  const cropperContainerRef = useRef(null);
+  const [cropperDims, setCropperDims] = useState({ width: 800, height: 600 });
+
+  useEffect(() => {
+    if (cropperContainerRef.current) {
+      const updateDims = () => {
+        setCropperDims({
+          width: cropperContainerRef.current.clientWidth,
+          height: cropperContainerRef.current.clientHeight,
+        });
+      };
+      updateDims();
+      window.addEventListener("resize", updateDims);
+      return () => window.removeEventListener("resize", updateDims);
+    }
+  }, [mode]);
+
+  const renderWatermark = () => {
+    if (!watermark || !watermark.image) return null;
+
+    const { image, opacity, scale, position } = watermark;
+    const style = {
+      opacity: opacity / 100,
+      width: `${scale}%`,
+      height: "auto",
+      position: "absolute",
+      pointerEvents: "none",
+      zIndex: 40,
+    };
+
+    const parts = position.split("-");
+    const v = parts[0]; // top, center, bottom
+    const h = parts[1] || "center"; // left, center, right
+
+    if (v === "top") style.top = "10px";
+    else if (v === "bottom") style.bottom = "10px";
+    else if (v === "center") {
+      style.top = "50%";
+      style.transform = "translateY(-50%)";
+    }
+
+    if (h === "left") style.left = "10px";
+    else if (h === "right") style.right = "10px";
+    else if (h === "center") {
+      style.left = "50%";
+      style.transform = style.transform
+        ? `${style.transform} translateX(-50%)`
+        : "translateX(-50%)";
+    }
+
+    return (
+      <img src={image} className="canvas-watermark" style={style} alt="" />
+    );
+  };
 
   if (mode === "scale") {
     return (
@@ -541,10 +684,19 @@ const ImagePreview = ({
           customColor={customColor}
           scaleZoom={scaleZoom}
           onScaleZoomChange={onScaleZoomChange}
+          adjustments={adjustments}
+          textLayers={textLayers}
+          onTextLayerUpdate={onTextLayerUpdate}
         />
+        {renderWatermark()}
       </div>
     );
   }
+
+  const { brightness = 100, contrast = 100, saturation = 100 } = adjustments;
+  const adjustFilter = (brightness !== 100 || contrast !== 100 || saturation !== 100)
+    ? `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`
+    : 'none';
 
   return (
     <div
@@ -556,7 +708,9 @@ const ImagePreview = ({
         background: "var(--bg)",
         borderRadius: 8,
         overflow: "hidden",
+        filter: adjustFilter,
       }}
+      ref={cropperContainerRef}
     >
       <Cropper
         image={image}
@@ -573,6 +727,30 @@ const ImagePreview = ({
           cropAreaClassName: "cropper-area",
         }}
       />
+
+      {/* Text Layers Overlay */}
+      <div
+        className="text-layers-overlay"
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 20,
+        }}
+      >
+        {textLayers.map((layer) => (
+          <div key={layer.id} style={{ pointerEvents: "auto" }}>
+            <DraggableText
+              layer={layer}
+              onUpdate={onTextLayerUpdate}
+              containerWidth={cropperDims.width}
+              containerHeight={cropperDims.height}
+            />
+          </div>
+        ))}
+      </div>
+
+      {renderWatermark()}
 
       <div
         className="crop-dimensions"

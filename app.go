@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,21 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+// AppSettings defines persistent app configs
+type AppSettings struct {
+	LastExportDir      string `json:"lastExportDir"`
+	JpegQuality        int    `json:"jpegQuality"`
+	ShowGrid           bool   `json:"showGrid"`
+	ShowGuidelines     bool   `json:"showGuidelines"`
+	SafeZonePercentage int    `json:"safeZonePercentage"`
+	PaddingStyle       string `json:"paddingStyle"`
+	CustomPaddingColor string `json:"customPaddingColor"`
+	WatermarkImage     string `json:"watermarkImage"`
+	WatermarkOpacity   int    `json:"watermarkOpacity"`
+	WatermarkScale     int    `json:"watermarkScale"`
+	WatermarkPosition  string `json:"watermarkPosition"`
+}
 
 // App struct
 type App struct {
@@ -93,8 +109,16 @@ func (a *App) SaveImage(base64Data string, defaultFilename string) (string, erro
 
 // SelectDirectory opens a native file dialog to select a directory
 func (a *App) SelectDirectory() (string, error) {
+	// Try to get last saved directory
+	defaultDir := ""
+	settings, _ := a.LoadSettings()
+	if settings.LastExportDir != "" {
+		defaultDir = settings.LastExportDir
+	}
+
 	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Select Export Folder",
+		DefaultDirectory: defaultDir,
 	})
 	if err != nil {
 		return "", err
@@ -102,7 +126,41 @@ func (a *App) SelectDirectory() (string, error) {
 	if dir == "" {
 		return "", fmt.Errorf("dialog cancelled")
 	}
+
+	// Save back the chosen directory
+	settings.LastExportDir = dir
+	a.SaveSettings(settings)
+
 	return dir, nil
+}
+
+// Settings file path helper
+func (a *App) getSettingsPath() string {
+	home, _ := os.UserConfigDir() // Use OS config path (AppData on win)
+	appDir := filepath.Join(home, "SocialImageResizer")
+	os.MkdirAll(appDir, os.ModePerm)
+	return filepath.Join(appDir, "settings.json")
+}
+
+// LoadSettings loads persistent app settings
+func (a *App) LoadSettings() (AppSettings, error) {
+	var settings AppSettings
+	path := a.getSettingsPath()
+	data, err := os.ReadFile(path)
+	if err == nil {
+		json.Unmarshal(data, &settings)
+	}
+	return settings, err
+}
+
+// SaveSettings writes persistent app settings
+func (a *App) SaveSettings(settings AppSettings) error {
+	path := a.getSettingsPath()
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 // SaveImageToPath writes the base64 data to a pre-selected path

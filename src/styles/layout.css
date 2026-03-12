@@ -1,7 +1,14 @@
 /* Layout and Main Structure Styles */
 
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .main-content {
-  flex: 1;
+  flex: 1; /* Main area takes all remaining space */
   display: grid;
   grid-template-columns: 260px 1fr;
   width: 100%;

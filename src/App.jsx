@@ -18,6 +18,7 @@ import CanvasArea from "./components/CanvasArea";
 import TabbedControls from "./components/TabbedControls";
 import BatchSidebar from "./components/BatchSidebar";
 import SettingsModal from "./components/SettingsModal";
+import TextOverlayPanel from "./components/TextOverlayPanel";
 
 function App() {
   const [activePlatform, setActivePlatform] = useState(platforms[0]);
@@ -65,6 +66,14 @@ function App() {
   );
   const [jpegQuality, setJpegQuality] = useState(IMAGE_CONFIG.JPEG_QUALITY * 100);
   const [recentPresets, setRecentPresets] = useState([]);
+  const [adjustments, setAdjustments] = useState({ brightness: 100, contrast: 100, saturation: 100 });
+  const [textLayers, setTextLayers] = useState([]);
+  const [watermark, setWatermark] = useState({
+    image: null,
+    opacity: 50,
+    scale: 20,
+    position: "bottom-right",
+  });
 
   const [loading, setLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -80,6 +89,74 @@ function App() {
   const toastTimeoutRef = useRef(null);
 
   const { processImage } = useExportWorker();
+
+  // Load User OS Settings on Startup
+  useEffect(() => {
+    if (window.go?.main?.App?.LoadSettings) {
+      window.go.main.App.LoadSettings()
+        .then((settings) => {
+          if (settings) {
+            if (settings.jpegQuality > 0) setJpegQuality(settings.jpegQuality);
+            if (settings.showGrid !== undefined) setShowGrid(settings.showGrid);
+            if (settings.showGuidelines !== undefined)
+              setShowGuidelines(settings.showGuidelines);
+            if (settings.safeZonePercentage > 0)
+              setSafeZonePercentage(settings.safeZonePercentage);
+            if (settings.paddingStyle) setPaddingStyle(settings.paddingStyle);
+            if (settings.customPaddingColor)
+              setCustomPaddingColor(settings.customPaddingColor);
+            if (settings.watermarkImage) {
+              setWatermark({
+                image: settings.watermarkImage,
+                opacity: settings.watermarkOpacity || 50,
+                scale: settings.watermarkScale || 20,
+                position: settings.watermarkPosition || "bottom-right",
+              });
+            }
+          }
+        })
+        .catch(() => {
+          // Settings file doesn't exist yet (first run)
+        });
+    }
+  }, []);
+
+  // Save Settings when they change (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (window.go?.main?.App?.SaveSettings) {
+        const settings = {
+          jpegQuality,
+          showGrid,
+          showGuidelines,
+          safeZonePercentage,
+          paddingStyle,
+          customPaddingColor,
+          watermarkImage: watermark.image,
+          watermarkOpacity: watermark.opacity,
+          watermarkScale: watermark.scale,
+          watermarkPosition: watermark.position,
+        };
+
+        window.go.main.App.LoadSettings().then((current) => {
+          window.go.main.App.SaveSettings({
+            ...current,
+            ...settings,
+          });
+        });
+      }
+    }, 1000); // Wait 1 second after last change
+
+    return () => clearTimeout(timer);
+  }, [
+    jpegQuality,
+    showGrid,
+    showGuidelines,
+    safeZonePercentage,
+    paddingStyle,
+    customPaddingColor,
+    watermark,
+  ]);
 
   // Auto-dismiss notifications
   useEffect(() => {
@@ -112,6 +189,9 @@ function App() {
                 originalImage,
                 imageSize,
                 scalePosition,
+                scaleZoom,
+                adjustments,
+                textLayers,
               }
             : item,
         ),
@@ -125,9 +205,27 @@ function App() {
     originalImage,
     imageSize,
     scalePosition,
+    scaleZoom,
+    adjustments,
+    textLayers,
     activeIndex,
     batch.length,
+    watermark,
   ]);
+
+  const handleTextLayerAdd = useCallback((layer) => {
+    setTextLayers((prev) => [...prev, layer]);
+  }, []);
+
+  const handleTextLayerUpdate = useCallback((id, updates) => {
+    setTextLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+    );
+  }, []);
+
+  const handleTextLayerRemove = useCallback((id) => {
+    setTextLayers((prev) => prev.filter((l) => l.id !== id));
+  }, []);
 
   const processFile = (file) => {
     return new Promise((resolve) => {
@@ -176,7 +274,10 @@ function App() {
             originalImage: fullResUrl,
             imageSize: { width: img.width, height: img.height },
             crop: { x: 0, y: 0 },
+            zoom: 1,
             croppedAreaPixels: null,
+            adjustments: { brightness: 100, contrast: 100, saturation: 100 },
+            textLayers: [],
           });
         };
         img.src = e.target.result;
@@ -228,7 +329,28 @@ function App() {
 
       try {
         const newItems = await Promise.all(filesWithValidSize.map(processFile));
+        const insertIndex = batch.length;
         setBatch((prev) => [...prev, ...newItems]);
+
+        // Auto-switch to the first newly added image
+        const first = newItems[0];
+        setImage(first.image);
+        setOriginalImage(first.originalImage);
+        setImageSize(first.imageSize);
+        setCrop(first.crop);
+        setZoom(1);
+        setCroppedAreaPixels(first.croppedAreaPixels);
+        setScalePosition(first.scalePosition || { x: 0, y: 0 });
+        setScaleZoom(first.scaleZoom || 1);
+        setAdjustments(
+          first.adjustments || {
+            brightness: 100,
+            contrast: 100,
+            saturation: 100,
+          },
+        );
+        setTextLayers(first.textLayers || []);
+        setActiveIndex(insertIndex);
 
         // Show success message
         const count = newItems.length;
@@ -236,24 +358,14 @@ function App() {
           `${count} ${count === 1 ? "image" : "images"} ${SUCCESS_MESSAGES.IMAGES_UPLOADED}`,
         );
 
-        // If first upload, set active
-        if (batch.length === 0) {
-          const first = newItems[0];
-          setImage(first.image);
-          setOriginalImage(first.originalImage);
-          setImageSize(first.imageSize);
-          setCrop(first.crop);
-          setZoom(1);
-          setCroppedAreaPixels(first.croppedAreaPixels);
-          setActiveIndex(0);
-
-          // Check for upscaling warning
-          if (
-            outputSize.width > first.imageSize.width ||
-            outputSize.height > first.imageSize.height
-          ) {
-            setWarning(WARNING_MESSAGES.UPSCALING);
-          }
+        // Check for upscaling warning
+        if (
+          outputSize.width > first.imageSize.width ||
+          outputSize.height > first.imageSize.height
+        ) {
+          setWarning(WARNING_MESSAGES.UPSCALING);
+        } else {
+          setWarning(null);
         }
       } catch (err) {
         setError(ERROR_MESSAGES.UPLOAD_FAILED);
@@ -261,7 +373,7 @@ function App() {
         setLoading(false);
       }
     },
-    [batch.length],
+    [batch.length, outputSize],
   );
 
   const handleNativeFilePaths = useCallback(async (filePaths) => {
@@ -357,6 +469,27 @@ function App() {
     [batch, activeIndex],
   );
 
+  const handleReorder = useCallback(
+    (fromIndex, toIndex) => {
+      const newBatch = [...batch];
+      const [moved] = newBatch.splice(fromIndex, 1);
+      newBatch.splice(toIndex, 0, moved);
+      setBatch(newBatch);
+
+      // Keep the active image tracked correctly after reorder
+      let nextActive = activeIndex;
+      if (activeIndex === fromIndex) {
+        nextActive = toIndex;
+      } else if (fromIndex < activeIndex && toIndex >= activeIndex) {
+        nextActive = activeIndex - 1;
+      } else if (fromIndex > activeIndex && toIndex <= activeIndex) {
+        nextActive = activeIndex + 1;
+      }
+      setActiveIndex(nextActive);
+    },
+    [batch, activeIndex],
+  );
+
   const handleSwitchImage = useCallback(
     (index) => {
       const next = batch[index];
@@ -369,10 +502,33 @@ function App() {
         setZoom(next.zoom);
         setCroppedAreaPixels(next.croppedAreaPixels);
         setScalePosition(next.scalePosition || { x: 0, y: 0 });
+        setScaleZoom(next.scaleZoom || 1);
+        setAdjustments(next.adjustments || { brightness: 100, contrast: 100, saturation: 100 });
+        setTextLayers(next.textLayers || []);
+        // Note: global watermark is intentionally not part of local batch item switch
       }
     },
     [batch],
   );
+
+  const handleApplyAdjustmentsToAll = useCallback(() => {
+    if (batch.length <= 1) return;
+    setBatch(prev => prev.map(item => ({
+      ...item,
+      adjustments: { ...adjustments }
+    })));
+    setSuccess("Adjustments applied to all images in batch");
+  }, [batch.length, adjustments]);
+
+  const handleApplyScaleToAll = useCallback(() => {
+    if (batch.length <= 1) return;
+    setBatch(prev => prev.map(item => ({
+      ...item,
+      scaleZoom,
+      scalePosition: { ...scalePosition }
+    })));
+    setSuccess("Scale and position applied to all images in batch");
+  }, [batch.length, scaleZoom, scalePosition]);
 
   const handleExportAll = useCallback(
     async (format) => {
@@ -415,7 +571,10 @@ function App() {
               vAlign,
               hAlign,
               scalePosition: mode === "scale" ? item.scalePosition : undefined,
-              scaleZoom: mode === "scale" ? scaleZoom : undefined,
+              scaleZoom: mode === "scale" ? (item.scaleZoom || scaleZoom) : undefined,
+              adjustments: item.adjustments || adjustments,
+              textLayers: item.textLayers || [],
+              watermark,
             },
             [imageBitmap],
           );
@@ -597,6 +756,9 @@ function App() {
             hAlign,
             scalePosition: mode === "scale" ? scalePosition : undefined,
             scaleZoom: mode === "scale" ? scaleZoom : undefined,
+            adjustments,
+            textLayers,
+            watermark,
           },
           [imageBitmap],
         );
@@ -674,6 +836,49 @@ function App() {
     setZoom(1);
   }, []);
 
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore shortcuts if the user is typing in an input/textarea
+      if (['input', 'textarea'].includes(e.target.tagName.toLowerCase())) return;
+
+      if (e.key === 'ArrowLeft') {
+        if (batch.length > 1 && activeIndex > 0) {
+          handleSwitchImage(activeIndex - 1);
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (batch.length > 1 && activeIndex < batch.length - 1) {
+          handleSwitchImage(activeIndex + 1);
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (batch.length > 0) {
+          handleRemoveItem(activeIndex);
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        handleNativeFileClick();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        if (batch.length > 1) {
+          handleExportAll('jpeg');
+        } else if (batch.length === 1) {
+          handleDownload('jpeg');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    batch.length,
+    activeIndex,
+    handleSwitchImage,
+    handleRemoveItem,
+    handleNativeFileClick,
+    handleExportAll,
+    handleDownload,
+  ]);
+
   return (
     <div className="app">
       <Header />
@@ -694,6 +899,7 @@ function App() {
           onSelect={handleSwitchImage}
           onRemove={handleRemoveItem}
           onAddMore={handleNativeFileClick}
+          onReorder={handleReorder}
         />
 
         <PresetPanel
@@ -744,6 +950,10 @@ function App() {
           customColor={customPaddingColor}
           scaleZoom={scaleZoom}
           onScaleZoomChange={setScaleZoom}
+          adjustments={adjustments}
+          textLayers={textLayers}
+          onTextLayerUpdate={handleTextLayerUpdate}
+          watermark={watermark}
         />
       </div>
 
@@ -798,7 +1008,19 @@ function App() {
           jpegQuality={jpegQuality}
           onJpegQualityChange={setJpegQuality}
           recentPresets={recentPresets}
+          adjustments={adjustments}
+          onAdjustmentsChange={setAdjustments}
+          textLayers={textLayers}
+          onTextLayerAdd={handleTextLayerAdd}
+          onTextLayerUpdate={handleTextLayerUpdate}
+          onTextLayerRemove={handleTextLayerRemove}
           onQuickSizeSelect={handleQuickSizeSelect}
+          watermark={watermark}
+          onWatermarkUpload={(image) => setWatermark(prev => ({ ...prev, image }))}
+          onWatermarkUpdate={(updates) => setWatermark(prev => ({ ...prev, ...updates }))}
+          onWatermarkRemove={() => setWatermark(prev => ({ ...prev, image: null }))}
+          onApplyAdjustmentsToAll={handleApplyAdjustmentsToAll}
+          onApplyScaleToAll={handleApplyScaleToAll}
         />
       )}
 

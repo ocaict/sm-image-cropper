@@ -1,5 +1,7 @@
 import React, { useState, useCallback, memo, useEffect } from "react";
 import { platforms, commonSizes, aspectRatios, getAspectRatio } from "../utils/presets";
+import TextOverlayPanel from "./TextOverlayPanel";
+import WatermarkPanel from "./WatermarkPanel";
 
 const TabbedControls = memo(({
   zoom,
@@ -38,6 +40,18 @@ const TabbedControls = memo(({
   onJpegQualityChange,
   recentPresets = [],
   onQuickSizeSelect,
+  adjustments = { brightness: 100, contrast: 100, saturation: 100 },
+  onAdjustmentsChange,
+  textLayers = [],
+  onTextLayerAdd,
+  onTextLayerUpdate,
+  onTextLayerRemove,
+  watermark,
+  onWatermarkUpload,
+  onWatermarkUpdate,
+  onWatermarkRemove,
+  onApplyAdjustmentsToAll,
+  onApplyScaleToAll,
 }) => {
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [lastFormat, setLastFormat] = useState("jpeg");
@@ -92,6 +106,24 @@ const TabbedControls = memo(({
           onClick={() => setActiveTab("view")}
         >
           View
+        </button>
+        <button
+          className={`control-tab ${activeTab === "adjust" ? "active" : ""}`}
+          onClick={() => setActiveTab("adjust")}
+        >
+          Adjust
+        </button>
+        <button
+          className={`control-tab ${activeTab === "text" ? "active" : ""}`}
+          onClick={() => setActiveTab("text")}
+        >
+          Text
+        </button>
+        <button
+          className={`control-tab ${activeTab === "watermark" ? "active" : ""}`}
+          onClick={() => setActiveTab("watermark")}
+        >
+          Watermark
         </button>
       </div>
 
@@ -381,14 +413,26 @@ const TabbedControls = memo(({
               </div>
             )}
 
-            {/* Settings button */}
-            <button className="btn btn-secondary" onClick={() => onOpenSettings?.()}>
-              <svg style={{ width: 14, height: 14 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 1v6m0 6v4M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h4" />
-              </svg>
-              More
-            </button>
+            {/* Actions */}
+            <div className="scale-actions">
+              <button className="btn btn-secondary" onClick={() => onOpenSettings?.()}>
+                <svg style={{ width: 14, height: 14 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 1v6m0 6v4M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h4" />
+                </svg>
+                More
+              </button>
+
+              {isBatch && (
+                <button
+                  className="btn btn-secondary batch-apply-btn"
+                  onClick={onApplyScaleToAll}
+                  title="Apply current padding, alignment, and zoom to all images in the batch"
+                >
+                  Apply to All
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -453,6 +497,83 @@ const TabbedControls = memo(({
           </div>
         )}
 
+        {activeTab === "adjust" && (
+          <div className="adjust-controls">
+            <div className="control-section">
+              <div className="adjust-header">
+                <span className="section-label">Brightness</span>
+                <span className="adjust-value">{adjustments.brightness}%</span>
+              </div>
+              <input
+                type="range" min="0" max="200" value={adjustments.brightness}
+                className="adjust-slider"
+                onChange={(e) => onAdjustmentsChange?.({ ...adjustments, brightness: parseInt(e.target.value) })}
+              />
+            </div>
+            <div className="control-section">
+              <div className="adjust-header">
+                <span className="section-label">Contrast</span>
+                <span className="adjust-value">{adjustments.contrast}%</span>
+              </div>
+              <input
+                type="range" min="0" max="200" value={adjustments.contrast}
+                className="adjust-slider"
+                onChange={(e) => onAdjustmentsChange?.({ ...adjustments, contrast: parseInt(e.target.value) })}
+              />
+            </div>
+            <div className="control-section">
+              <div className="adjust-header">
+                <span className="section-label">Saturation</span>
+                <span className="adjust-value">{adjustments.saturation}%</span>
+              </div>
+              <input
+                type="range" min="0" max="200" value={adjustments.saturation}
+                className="adjust-slider"
+                onChange={(e) => onAdjustmentsChange?.({ ...adjustments, saturation: parseInt(e.target.value) })}
+              />
+            </div>
+            
+            <div className="adjust-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => onAdjustmentsChange?.({ brightness: 100, contrast: 100, saturation: 100 })}
+              >
+                Reset
+              </button>
+
+              {isBatch && (
+                <button
+                  className="btn btn-secondary batch-apply-btn"
+                  onClick={onApplyAdjustmentsToAll}
+                  title="Apply these adjustments to all images in the batch"
+                >
+                  Apply to All
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "text" && (
+          <TextOverlayPanel
+            textLayers={textLayers}
+            onAdd={onTextLayerAdd}
+            onUpdate={onTextLayerUpdate}
+            onRemove={onTextLayerRemove}
+          />
+        )}
+        {activeTab === "watermark" && (
+          <WatermarkPanel
+            watermark={watermark}
+            onWatermarkUpload={onWatermarkUpload}
+            onWatermarkUpdate={onWatermarkUpdate}
+            onWatermarkRemove={onWatermarkRemove}
+          />
+        )}
+
+      </div>
+
+      <div className="controls-footer">
         <div className="image-info">
           <span>
             Image: <strong>{imageSize.width} × {imageSize.height}</strong>
