@@ -26,22 +26,29 @@ The worker is managed via a custom hook `useExportWorker`, which maintains a per
 
 To optimize memory usage and rendering performance, images larger than 2000px (or >5MB) are automatically downscaled for the UI preview. The original full-resolution image is kept in memory and used only during the final export process within the Web Worker.
 
-## Development
+## Development (Desktop App)
 
-1.  Install dependencies: `npm install`
-2.  Start dev server: `npm run dev`
-3.  Build for production: `npm run build`
+This application has been upgraded to a native Desktop Application using [Wails](https://wails.io/).
 
-## Getting Started (Quick Start)
+### Prerequisites
+- Node.js >= 18
+- Go >= 1.24
+- [Wails CLI](https://wails.io/docs/gettingstarted/installation)
 
-- Prerequisites: Node.js >= 18 and npm (or pnpm/yarn if you prefer)
-- Install: `npm install`
-- Run dev server: `npm run dev`
-- Build for production: `npm run build`
-- Preview built app: `npm run preview`
+### Running Locally
+1. Install frontend dependencies: `npm install`
+2. Run the desktop app in development mode: `wails dev`
+*(This will automatically spin up the Vite dev server and hot-reload the Go Native UI)*
+
+### Building the Executable
+To build a standalone `.exe` for distribution:
+```bash
+wails build
+```
+The compiled executable will be output to `build/bin/image-cropper.exe`.
 
 ## Repository Hygiene
 
-- Build outputs should be ignored (dist/). This repo now ignores dist/ and node_modules/ via .gitignore.
-- Commit lockfile (package-lock.json) to ensure reproducible installs.
-- Do not commit large binary assets or build artifacts. Regenerate them via the build script when needed.
+- Build outputs are ignored (`dist/`, `build/bin/`, `build/obj/`).
+- Only core source files (`app.go`, `main.go`, `wails.json`, `src/`) and build asset templates (`build/windows/*`) should be committed.
+- Commit lockfile (`package-lock.json` and `go.mod`/`go.sum`) to ensure reproducible installs.

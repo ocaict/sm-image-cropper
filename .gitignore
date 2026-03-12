@@ -3,7 +3,9 @@ node_modules/
 
 # Build outputs
 dist/
-build/
+build/bin/
+build/obj/
+frontend/
 
 # Local environment
 .env

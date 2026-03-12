@@ -264,6 +264,74 @@ function App() {
     [batch.length],
   );
 
+  const handleNativeFilePaths = useCallback(async (filePaths) => {
+    if (!filePaths || filePaths.length === 0) return;
+
+    setLoading(true);
+    const files = [];
+    
+    for (const path of filePaths) {
+      try {
+        const dataUrl = await window.go.main.App.ReadFileAsBase64(path);
+        const name = path.split('\\').pop().split('/').pop();
+        
+        // Decode base64 manually to bypass CSP connect-src issues with fetch()
+        const mimeType = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+        const base64Data = dataUrl.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteArrays = [];
+        
+        for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+          const slice = byteCharacters.slice(offset, offset + 1024);
+          const byteNumbers = new Array(slice.length);
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+        
+        const blob = new Blob(byteArrays, { type: mimeType });
+        const file = new File([blob], name, { type: mimeType });
+        
+        files.push(file);
+      } catch (err) {
+        console.error("Failed to load native file:", path, err);
+      }
+    }
+    
+    handleFileSelect(files);
+    setLoading(false);
+  }, [handleFileSelect]);
+
+  const handleNativeFileClick = useCallback(async () => {
+    if (window.go?.main?.App?.SelectImages) {
+      try {
+        const filePaths = await window.go.main.App.SelectImages();
+        await handleNativeFilePaths(filePaths);
+      } catch (err) {
+        console.error("Native file select failed", err);
+        setLoading(false);
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  }, [handleNativeFilePaths]);
+
+  // Hook into Wails native drag and drop
+  useEffect(() => {
+    if (window.runtime?.EventsOn) {
+      const off = window.runtime.EventsOn("wails:file-drop", (x, y, paths) => {
+        handleNativeFilePaths(paths);
+      });
+      return () => {
+         if (window.runtime?.EventsOff) {
+             window.runtime.EventsOff("wails:file-drop");
+         }
+      };
+    }
+  }, [handleNativeFilePaths]);
+
   const handleRemoveItem = useCallback(
     (index) => {
       const newBatch = batch.filter((_, i) => i !== index);
@@ -312,6 +380,17 @@ function App() {
 
       try {
         setLoading(true);
+        let exportDir = null;
+
+        if (window.go?.main?.App?.SelectDirectory) {
+           try {
+             exportDir = await window.go.main.App.SelectDirectory();
+           } catch(err) {
+              setLoading(false);
+              return; // User cancelled directory selection
+           }
+        }
+
         setBatchProgress({ current: 0, total: batch.length });
 
         for (let index = 0; index < batch.length; index++) {
@@ -354,14 +433,28 @@ function App() {
           // Append unique identifier for batch items to avoid naming collisions
           const finalFilename = `${item.id}_${filename}`;
 
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = finalFilename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
+          if (window.go?.main?.App?.SaveImageToPath && exportDir) {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            await new Promise((resolve) => {
+              reader.onloadend = async () => {
+                 try {
+                   const fullPath = await window.go.main.App.JoinPath(exportDir, finalFilename);
+                   await window.go.main.App.SaveImageToPath(reader.result, fullPath);
+                 } catch(err) { console.error(err); }
+                 resolve();
+              }
+            });
+          } else {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = finalFilename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }
 
           // Update progress
           setBatchProgress({ current: index + 1, total: batch.length });
@@ -518,6 +611,27 @@ function App() {
           format,
         );
 
+        if (window.go?.main?.App?.SaveImage) {
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onloadend = async () => {
+             try {
+                const savedPath = await window.go.main.App.SaveImage(reader.result, filename);
+                if (savedPath) {
+                   setSuccess(`${SUCCESS_MESSAGES.EXPORT_COMPLETE} to ${savedPath}`);
+                }
+             } catch(err) {
+                if (err && !err.message?.includes("dialog cancelled") && !err.includes("dialog cancelled")) {
+                   setError(ERROR_MESSAGES.EXPORT_FAILED + err);
+                }
+             } finally {
+                setLoading(false);
+                setShowDownloadMenu(false);
+             }
+          }
+          return;
+        }
+
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -579,7 +693,7 @@ function App() {
           activeIndex={activeIndex}
           onSelect={handleSwitchImage}
           onRemove={handleRemoveItem}
-          onAddMore={() => fileInputRef.current?.click()}
+          onAddMore={handleNativeFileClick}
         />
 
         <PresetPanel
@@ -609,7 +723,7 @@ function App() {
             setDragOver(true);
           }}
           onDragLeave={() => setDragOver(false)}
-          onFileClick={() => fileInputRef.current?.click()}
+          onFileClick={handleNativeFileClick}
           loading={loading}
           imageSize={imageSize}
           outputSize={outputSize}
