@@ -1,6 +1,21 @@
 import React, { useState } from 'react';
+import MenuBar from './MenuBar';
 
-const Header = () => {
+
+const Header = ({ 
+  onImport, 
+  onExport, 
+  onExportAll, 
+  onClear, 
+  onApplyToAll, 
+  onToggleGrid, 
+  onToggleGuides, 
+  onResetZoom,
+  onOpenSettings,
+  isBatch,
+  mode,
+  outputSize
+}) => {
   const [isMaximized, setIsMaximized] = useState(false);
 
   const handleMinimize = () => {
@@ -28,19 +43,22 @@ const Header = () => {
       style={{ 
         "--wails-draggable": "drag",
         display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "0 8px 0 20px",  // Right padding is smaller to tightly tuck the buttons
-        minHeight: "56px"
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: "0 8px 0 20px",
+        minHeight: "72px",
+        background: "var(--surface)",
+        borderBottom: "1px solid var(--border)"
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <div className="header-logo">SI</div>
-        <h1 className="header-title">Social Image Resizer</h1>
-      </div>
-      
-      {/* Custom Window Controls (Only visible/functional in Wails) */}
-      {window.runtime && (
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", height: "36px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div className="header-logo">SI</div>
+          <h1 className="header-title" style={{ fontSize: "14px", fontWeight: "700" }}>Social Image Resizer</h1>
+        </div>
+        
+        {/* Custom Window Controls (Only visible/functional in Wails) */}
+        {window.runtime && (
           <div 
             className="window-controls" 
             style={{ 
@@ -49,19 +67,10 @@ const Header = () => {
               "--wails-draggable": "no-drag" 
             }}
           >
+            {/* ... keep minimize, maximize, close ... */}
             <button 
               onClick={handleMinimize}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--text-secondary)",
-                cursor: "pointer",
-                padding: "8px",
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
+              className="window-control-btn"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
                 <rect x="1" y="5" width="10" height="2" />
@@ -69,17 +78,7 @@ const Header = () => {
             </button>
             <button 
               onClick={handleToggleMaximize}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--text-secondary)",
-                cursor: "pointer",
-                padding: "8px",
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
+              className="window-control-btn"
             >
               {isMaximized ? (
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor">
@@ -94,25 +93,7 @@ const Header = () => {
             </button>
             <button 
               onClick={handleClose}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--text-secondary)",
-                cursor: "pointer",
-                padding: "8px",
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = "rgba(255, 68, 68, 0.1)";
-                e.currentTarget.style.color = "#ff4444";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = "var(--text-secondary)";
-              }}
+              className="window-control-btn close"
             >
                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
                   <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -120,6 +101,20 @@ const Header = () => {
             </button>
           </div>
         )}
+      </div>
+
+      <MenuBar 
+        onImport={onImport}
+        onExport={onExport}
+        onExportAll={onExportAll}
+        onClear={onClear}
+        onApplyToAll={onApplyToAll}
+        onToggleGrid={onToggleGrid}
+        onToggleGuides={onToggleGuides}
+        onResetZoom={onResetZoom}
+        onOpenSettings={onOpenSettings}
+        isBatch={isBatch}
+      />
     </header>
   );
 };

@@ -6,6 +6,29 @@
   box-sizing: border-box;
 }
 
+button, 
+input[type="button"], 
+input[type="submit"], 
+input[type="reset"], 
+select, 
+label, 
+[role="button"],
+.tab,
+.menu-trigger,
+.menu-option,
+.aspect-btn,
+.nav-tab-btn,
+.btn-compact,
+.btn-split,
+.btn-icon-only,
+.preset-card,
+.batch-item,
+.remove-item,
+.add-batch-item {
+  cursor: default !important;
+}
+
+
 body {
   font-family: "Sora", sans-serif;
   background: var(--bg);

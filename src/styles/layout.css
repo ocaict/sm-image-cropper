@@ -1,11 +1,13 @@
 /* Layout and Main Structure Styles */
 
-.app {
+.app-main-layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  background: var(--bg);
 }
+
 
 .main-content {
   flex: 1; /* Main area takes all remaining space */
@@ -23,13 +25,14 @@
 
 /* Header */
 .header {
-  background: rgba(20, 20, 31, 0.95);
-  backdrop-filter: blur(12px);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 12px 20px;
   flex-shrink: 0;
   z-index: 100;
+  cursor: default;
 }
+
+
 
 .header-content {
   max-width: 1400px;
@@ -49,7 +52,10 @@
   justify-content: center;
   font-weight: 700;
   font-size: 16px;
+  user-select: none;
+  cursor: default;
 }
+
 
 .header-title {
   font-size: 18px;
@@ -58,7 +64,10 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  user-select: none;
+  cursor: default;
 }
+
 
 /* Canvas Area */
 .canvas-area {
@@ -85,7 +94,9 @@
   align-items: center;
   justify-content: center;
   min-height: 0;
+  cursor: default;
 }
+
 
 .preview-canvas-wrapper {
   position: relative;

@@ -88,219 +88,89 @@ const TabbedControls = memo(({
 
   return (
     <div className="tabbed-controls">
-      <div className="controls-tabs">
-        <button
-          className={`control-tab ${activeTab === "home" ? "active" : ""}`}
-          onClick={() => setActiveTab("home")}
-        >
-          Home
-        </button>
-        <button
-          className={`control-tab ${activeTab === "scale" ? "active" : ""}`}
-          onClick={() => setActiveTab("scale")}
-        >
-          Scale
-        </button>
-        <button
-          className={`control-tab ${activeTab === "view" ? "active" : ""}`}
-          onClick={() => setActiveTab("view")}
-        >
-          View
-        </button>
-        <button
-          className={`control-tab ${activeTab === "adjust" ? "active" : ""}`}
-          onClick={() => setActiveTab("adjust")}
-        >
-          Adjust
-        </button>
-        <button
-          className={`control-tab ${activeTab === "text" ? "active" : ""}`}
-          onClick={() => setActiveTab("text")}
-        >
-          Text
-        </button>
-        <button
-          className={`control-tab ${activeTab === "watermark" ? "active" : ""}`}
-          onClick={() => setActiveTab("watermark")}
-        >
-          Watermark
-        </button>
-      </div>
-
-      <div className="controls-content">
-        {activeTab === "home" && (
-          <div className="control-group home-controls">
-            {/* Mode Toggle */}
-            <div className="mode-toggle-group">
-              <button
-                className={`mode-toggle-btn ${mode === "crop" ? "active" : ""}`}
-                onClick={() => setMode("crop")}
-              >
-                Crop
-              </button>
-              <button
-                className={`mode-toggle-btn ${mode === "scale" ? "active" : ""}`}
-                onClick={() => setMode("scale")}
-              >
-                Scale
-              </button>
-            </div>
-
-            {/* Quick Size Dropdown */}
-            <div className="size-dropdown">
-              <button
-                className="btn btn-size"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowSizeMenu(!showSizeMenu);
-                }}
-              >
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M9 3v18M3 9h18" />
-                </svg>
-                {selectedPreset ? selectedPreset.name : `${outputSize.width}×${outputSize.height}`}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 12, height: 12 }}>
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
-              {showSizeMenu && (
-                <div className="size-menu">
-                  {recentPresets.length > 0 && (
-                    <>
-                      <div className="size-menu-header">Recent</div>
-                      {recentPresets.map((preset) => (
-                        <button
-                          key={preset.id}
-                          className="size-menu-item"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onQuickSizeSelect?.(preset);
-                            setShowSizeMenu(false);
-                          }}
-                        >
-                          <span className="size-name">{preset.name}</span>
-                          <span className="size-dims">{preset.width}×{preset.height}</span>
-                        </button>
-                      ))}
-                      <div className="size-menu-divider" />
-                    </>
-                  )}
-                  {platforms.map((platform) => (
-                    <div key={platform.id}>
-                      <div className="size-menu-header" style={{ color: platform.color }}>{platform.name}</div>
-                      {platform.presets.slice(0, 4).map((preset) => (
-                        <button
-                          key={preset.id}
-                          className="size-menu-item"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onQuickSizeSelect?.(preset);
-                            setShowSizeMenu(false);
-                          }}
-                        >
-                          <span className="size-name">{preset.name}</span>
-                          <span className="size-dims">{preset.width}×{preset.height}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-                  <div className="size-menu-divider" />
-                  <div className="size-menu-header">Common Sizes</div>
-                  {commonSizes.map((size) => (
-                    <button
-                      key={size.id}
-                      className="size-menu-item"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onQuickSizeSelect?.(size);
-                        setShowSizeMenu(false);
-                      }}
-                    >
-                      <span className="size-name">{size.name}</span>
-                      <span className="size-dims">{size.width}×{size.height}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button className="btn btn-secondary" onClick={onClear}>
-              <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Clear
+    <div className="tabbed-controls-compact">
+      <div className="compact-nav-bar">
+        <div className="nav-tabs">
+          {[
+            { id: "home", label: "Edit", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 14" /></svg> },
+            { id: "scale", label: "Frame", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M3 9h18" /></svg> },
+            { id: "adjust", label: "Tune", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg> },
+            { id: "text", label: "Text", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3M9 20h6M12 4v16" /></svg> },
+            { id: "watermark", label: "Brand", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg> },
+            { id: "view", label: "View", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg> },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              className={`nav-tab-btn ${activeTab === tab.id ? "active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <span className="tab-icon">{tab.icon}</span>
+              <span className="tab-label">{tab.label}</span>
             </button>
-
-            {/* Quality slider for JPEG */}
-            <div className="quality-dropdown">
-              <button
-                className={`btn btn-quality ${jpegQuality < 92 ? 'quality-modified' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowQuality(!showQuality);
-                }}
-              >
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-                </svg>
-                {jpegQuality}%
-                {jpegQuality < 92 && <span className="quality-indicator" />}
+          ))}
+        </div>
+        
+        <div className="nav-actions">
+           <div className="action-divider" />
+           <div className="primary-export-group">
+              <button className="btn-compact primary" onClick={() => handleDownload(lastFormat)}>
+                 <span>Export</span>
               </button>
-              {showQuality && (
-                <div className="quality-menu" onClick={(e) => e.stopPropagation()}>
-                  <div className="quality-header">JPEG Quality</div>
-                  <div className="quality-slider-container">
-                    <input
-                      type="range"
-                      min="60"
-                      max="100"
-                      value={jpegQuality}
-                      onChange={(e) => onJpegQualityChange(parseInt(e.target.value))}
-                      className="quality-slider"
-                    />
-                    <span className="quality-value">{jpegQuality}%</span>
-                  </div>
-                  <div className="quality-labels">
-                    <span>Smaller file</span>
-                    <span>Better quality</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="download-dropdown">
-              <button
-                className="btn btn-primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDownloadMenu(!showDownloadMenu);
-                }}
-              >
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
-                Export
+              <button className="btn-split primary" onClick={(e) => { e.stopPropagation(); setShowDownloadMenu(!showDownloadMenu); }}>
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
               </button>
               {showDownloadMenu && (
-                <div className="download-menu">
-                  <button className="download-option" onClick={() => handleDownload("png")}>
-                    Export PNG
-                  </button>
-                  <button className="download-option" onClick={() => handleDownload("jpeg")}>
-                    Export JPG
-                  </button>
-                  {isBatch && (
-                    <>
-                      <div className="dropdown-divider" />
-                      <button className="download-option batch-option" onClick={() => { onExportAll("png"); setShowDownloadMenu(false); }}>
-                        Export All PNG
-                      </button>
-                      <button className="download-option batch-option" onClick={() => { onExportAll("jpeg"); setShowDownloadMenu(false); }}>
-                        Export All JPG
-                      </button>
-                    </>
-                  )}
+                <div className="compact-download-menu">
+                   <div className="menu-section">Format</div>
+                   <button onClick={() => handleDownload("png")}>PNG Image</button>
+                   <button onClick={() => handleDownload("jpeg")}>JPG Image</button>
+                   {isBatch && (
+                     <>
+                       <div className="menu-divider" />
+                       <div className="menu-section">Batch Export</div>
+                       <button className="batch-btn" onClick={() => { onExportAll("png"); setShowDownloadMenu(false); }}>All as PNG</button>
+                       <button className="batch-btn" onClick={() => { onExportAll("jpeg"); setShowDownloadMenu(false); }}>All as JPG</button>
+                     </>
+                   )}
+                </div>
+              )}
+           </div>
+        </div>
+
+      </div>
+
+      <div className="compact-panel">
+
+        {activeTab === "home" && (
+          <div className="property-panel-row">
+            <div className="property-group">
+              <label className="prop-label">Resizing Mode</label>
+              <div className="segmented-control">
+                <button className={`segment ${mode === "crop" ? "active" : ""}`} onClick={() => setMode("crop")}>Crop & Fill</button>
+                <button className={`segment ${mode === "scale" ? "active" : ""}`} onClick={() => setMode("scale")}>Scale to Fit</button>
+              </div>
+            </div>
+
+            <div className="prop-divider" />
+
+            <div className="property-group flex-wide">
+              <label className="prop-label">Zoom Level ({Math.round(zoom * 100)}%)</label>
+              <div className="range-with-inputs">
+                <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} className="modern-range" />
+                <button className="btn-small-ghost" onClick={onReset}>Reset</button>
+              </div>
+            </div>
+
+            <div className="prop-divider" />
+
+            <div className="property-group">
+              <label className="prop-label">Export Quality</label>
+              <button className="quality-pill" onClick={() => setShowQuality(!showQuality)}>
+                {jpegQuality}% Quality
+              </button>
+              {showQuality && (
+                <div className="quality-popover">
+                  <input type="range" min="60" max="100" value={jpegQuality} onChange={(e) => onJpegQualityChange(parseInt(e.target.value))} />
                 </div>
               )}
             </div>
@@ -498,61 +368,62 @@ const TabbedControls = memo(({
         )}
 
         {activeTab === "adjust" && (
-          <div className="adjust-controls">
-            <div className="control-section">
-              <div className="adjust-header">
-                <span className="section-label">Brightness</span>
-                <span className="adjust-value">{adjustments.brightness}%</span>
+          <div className="property-panel-row">
+            <div className="property-group flex-wide">
+              <div className="setting-info">
+                <span className="prop-label">Brightness</span>
+                <span className="prop-value">{adjustments.brightness}%</span>
               </div>
               <input
                 type="range" min="0" max="200" value={adjustments.brightness}
-                className="adjust-slider"
+                className="modern-range"
                 onChange={(e) => onAdjustmentsChange?.({ ...adjustments, brightness: parseInt(e.target.value) })}
               />
             </div>
-            <div className="control-section">
-              <div className="adjust-header">
-                <span className="section-label">Contrast</span>
-                <span className="adjust-value">{adjustments.contrast}%</span>
+            
+            <div className="prop-divider" />
+
+            <div className="property-group flex-wide">
+              <div className="setting-info">
+                <span className="prop-label">Contrast</span>
+                <span className="prop-value">{adjustments.contrast}%</span>
               </div>
               <input
                 type="range" min="0" max="200" value={adjustments.contrast}
-                className="adjust-slider"
+                className="modern-range"
                 onChange={(e) => onAdjustmentsChange?.({ ...adjustments, contrast: parseInt(e.target.value) })}
               />
             </div>
-            <div className="control-section">
-              <div className="adjust-header">
-                <span className="section-label">Saturation</span>
-                <span className="adjust-value">{adjustments.saturation}%</span>
+
+            <div className="prop-divider" />
+
+            <div className="property-group flex-wide">
+              <div className="setting-info">
+                <span className="prop-label">Saturation</span>
+                <span className="prop-value">{adjustments.saturation}%</span>
               </div>
               <input
                 type="range" min="0" max="200" value={adjustments.saturation}
-                className="adjust-slider"
+                className="modern-range"
                 onChange={(e) => onAdjustmentsChange?.({ ...adjustments, saturation: parseInt(e.target.value) })}
               />
             </div>
-            
-            <div className="adjust-actions">
-              <button
-                className="btn btn-secondary"
-                onClick={() => onAdjustmentsChange?.({ brightness: 100, contrast: 100, saturation: 100 })}
-              >
+
+            <div className="prop-divider" />
+
+            <div className="tune-actions-column">
+              <button className="btn-small-ghost" onClick={() => onAdjustmentsChange?.({ brightness: 100, contrast: 100, saturation: 100 })}>
                 Reset
               </button>
-
               {isBatch && (
-                <button
-                  className="btn btn-secondary batch-apply-btn"
-                  onClick={onApplyAdjustmentsToAll}
-                  title="Apply these adjustments to all images in the batch"
-                >
+                <button className="btn-small-ghost accent" onClick={onApplyAdjustmentsToAll}>
                   Apply to All
                 </button>
               )}
             </div>
           </div>
         )}
+
 
         {activeTab === "text" && (
           <TextOverlayPanel
@@ -572,45 +443,9 @@ const TabbedControls = memo(({
         )}
 
       </div>
-
-      <div className="controls-footer">
-        <div className="image-info">
-          <span>
-            Image: <strong>{imageSize.width} × {imageSize.height}</strong>
-          </span>
-          <span>
-            Output: <strong>{outputSize.width} × {outputSize.height}</strong>
-          </span>
-          <span>
-            Mode: <strong>{mode === "crop" ? "Crop" : "Scale"}</strong>
-          </span>
-        </div>
-
-        {loading && batchProgress.total > 0 && (
-          <div className="batch-progress">
-            <div className="progress-info">
-              <span className="progress-label">Export Progress</span>
-              <span className="progress-text" aria-live="polite">
-                {batchProgress.current} of {batchProgress.total}
-              </span>
-            </div>
-            <div
-              className="progress-bar"
-              role="progressbar"
-              aria-valuenow={batchProgress.current}
-              aria-valuemin="0"
-              aria-valuemax={batchProgress.total}
-            >
-              <div
-                className="progress-fill"
-                style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
     </div>
-  );
+  </div>
+);
 });
 
 export default TabbedControls;

@@ -8,6 +8,9 @@ import {
   createExtendedBackground,
 } from "../utils/scaling.js";
 
+// Cache for decoded watermarks to avoid redundant fetches in batch processing
+const watermarkCache = new Map();
+
 self.onmessage = async (e) => {
   const {
     imageBitmap,
@@ -229,9 +232,15 @@ self.onmessage = async (e) => {
     if (watermark && watermark.image) {
       try {
         ctx.filter = "none";
-        const response = await fetch(watermark.image);
-        const blob = await response.blob();
-        const wmImg = await createImageBitmap(blob);
+        
+        // Check cache first
+        let wmImg = watermarkCache.get(watermark.image);
+        if (!wmImg) {
+          const response = await fetch(watermark.image);
+          const blob = await response.blob();
+          wmImg = await createImageBitmap(blob);
+          watermarkCache.set(watermark.image, wmImg);
+        }
         
         const { opacity, scale, position } = watermark;
         ctx.globalAlpha = opacity / 100;
@@ -256,7 +265,7 @@ self.onmessage = async (e) => {
         
         ctx.drawImage(wmImg, x, y, wmWidth, wmHeight);
         ctx.globalAlpha = 1.0;
-        wmImg.close();
+        // DO NOT wmImg.close() here as it is cached
       } catch (wmError) {
         // Silently fail watermark if error occurs (e.g. invalid URL)
       }
@@ -264,6 +273,7 @@ self.onmessage = async (e) => {
 
     const type = format === "png" ? "image/png" : "image/jpeg";
     const blob = await canvas.convertToBlob({ type, quality });
+
 
     // Clean up
     imageBitmap.close();
