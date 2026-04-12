@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import MenuBar from './MenuBar';
-
+import logo from '../assets/logo.png';
 
 const Header = ({ 
   onImport, 
@@ -53,9 +53,10 @@ const Header = ({
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", height: "36px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div className="header-logo">SI</div>
+          <img src={logo} alt="Logo" style={{ width: "24px", height: "24px", objectFit: "contain" }} />
           <h1 className="header-title" style={{ fontSize: "14px", fontWeight: "700" }}>Social Image Resizer</h1>
         </div>
+
         
         {/* Custom Window Controls (Only visible/functional in Wails) */}
         {window.runtime && (
