@@ -780,6 +780,25 @@ function App() {
     handleDownload,
   ]);
 
+  useEffect(() => {
+    const preventDefault = (e) => {
+      e.preventDefault();
+    };
+
+    const events = ['dragenter', 'dragover', 'dragleave', 'drop'];
+    events.forEach(eventName => {
+      window.addEventListener(eventName, preventDefault, true);
+      document.body.addEventListener(eventName, preventDefault, true);
+    });
+
+    return () => {
+      events.forEach(eventName => {
+        window.removeEventListener(eventName, preventDefault, true);
+        document.body.removeEventListener(eventName, preventDefault, true);
+      });
+    };
+  }, []);
+
 
   const handleApplyToAll = useCallback((type) => {
     if (type === 'adjustments') handleApplyAdjustmentsToAll();
@@ -865,6 +884,8 @@ function App() {
           zoom={zoom}
           setZoom={setZoom}
           onCropComplete={onCropComplete}
+          croppedAreaPixels={croppedAreaPixels}
+          croppedAreaPercent={croppedAreaPercent}
           mode={mode}
           containerRef={containerRef}
           onScalePositionChange={setScalePosition}

@@ -11,6 +11,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
+    <!-- Ultra-Aggressive Drag-and-Drop Shield -->
+    <script>
+      (function() {
+        const kill = (e) => {
+          e.preventDefault();
+        };
+        
+        window.addEventListener('dragenter', kill, true);
+        window.addEventListener('dragover', kill, true);
+        window.addEventListener('drop', kill, true);
+        
+        document.addEventListener('dragenter', kill, true);
+        document.addEventListener('dragover', kill, true);
+        document.addEventListener('drop', kill, true);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

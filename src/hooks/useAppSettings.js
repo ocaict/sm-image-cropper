@@ -40,7 +40,12 @@ export function useAppSettings(initialConfig) {
             }));
           }
         })
-        .catch((err) => console.error("Failed to load settings:", err));
+        .catch((err) => {
+          // Ignore "file not found" errors on first run
+          if (!err.toString().includes("cannot find the file")) {
+            console.error("Failed to load settings:", err);
+          }
+        });
     }
   }, []);
 
@@ -61,12 +66,17 @@ export function useAppSettings(initialConfig) {
           watermarkPosition: settings.watermark.position,
         };
 
-        window.go.main.App.LoadSettings().then((current) => {
-          window.go.main.App.SaveSettings({
-            ...current,
-            ...payload,
+        window.go.main.App.LoadSettings()
+          .then((current) => {
+            window.go.main.App.SaveSettings({
+              ...(current || {}),
+              ...payload,
+            });
+          })
+          .catch(() => {
+            // If load fails (e.g. file missing), just save current state as new settings
+            window.go.main.App.SaveSettings(payload);
           });
-        });
       }
     }, 1000);
 

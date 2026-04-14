@@ -596,6 +596,8 @@ const ImagePreview = ({
   textLayers = [],
   onTextLayerUpdate,
   watermark,
+  croppedAreaPixels,
+  croppedAreaPercent,
 }) => {
   const aspect = outputSize.width / outputSize.height;
   const cropperContainerRef = useRef(null);
@@ -728,12 +730,15 @@ const ImagePreview = ({
         }}
       />
 
-      {/* Text Layers Overlay */}
+      {/* Text Layers Overlay - Linked to Crop Area */}
       <div
         className="text-layers-overlay"
         style={{
           position: "absolute",
-          inset: 0,
+          left: `${croppedAreaPercent?.x || 0}%`,
+          top: `${croppedAreaPercent?.y || 0}%`,
+          width: `${croppedAreaPercent?.width || 100}%`,
+          height: `${croppedAreaPercent?.height || 100}%`,
           pointerEvents: "none",
           zIndex: 20,
         }}
@@ -743,8 +748,8 @@ const ImagePreview = ({
             <DraggableText
               layer={layer}
               onUpdate={onTextLayerUpdate}
-              containerWidth={cropperDims.width}
-              containerHeight={cropperDims.height}
+              containerWidth={cropperDims.width * ((croppedAreaPercent?.width || 100) / 100)}
+              containerHeight={cropperDims.height * ((croppedAreaPercent?.height || 100) / 100)}
             />
           </div>
         ))}

@@ -33,11 +33,19 @@ const CanvasArea = ({
   textLayers = [],
   onTextLayerUpdate,
   watermark,
+  croppedAreaPixels,
+  croppedAreaPercent,
 }) => {
   return (
     <main className="canvas-area">
       {!image ? (
-        <EmptyState onImport={onFileClick} dragOver={dragOver} />
+        <EmptyState 
+          onImport={onFileClick} 
+          dragOver={dragOver} 
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+        />
       ) : (
 
         <div
@@ -88,6 +96,8 @@ const CanvasArea = ({
             textLayers={textLayers}
             onTextLayerUpdate={onTextLayerUpdate}
             watermark={watermark}
+            croppedAreaPixels={croppedAreaPixels}
+            croppedAreaPercent={croppedAreaPercent}
           />
         </div>
       )}

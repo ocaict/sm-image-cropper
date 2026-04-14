@@ -1,11 +1,14 @@
 import React from 'react';
 import logo from '../assets/logo.png';
 
-const EmptyState = ({ onImport, dragOver }) => {
+const EmptyState = ({ onImport, dragOver, onDrop, onDragOver, onDragLeave }) => {
   return (
     <div 
       className={`premium-empty-state ${dragOver ? 'drag-over' : ''}`}
       onClick={onImport}
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
     >
       <div className="empty-state-content">
         <div className="empty-state-logo-wrapper">

@@ -199,17 +199,25 @@ self.onmessage = async (e) => {
 
     // Draw Text Layers
     if (textLayers && textLayers.length > 0) {
+      ctx.save();
       ctx.filter = "none";
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
       textLayers.forEach((layer) => {
         const fontSize = (layer.fontSize / 1000) * outputSize.width;
-        ctx.font = `${layer.fontWeight} ${fontSize}px ${layer.fontFamily}`;
+        // Ensure font family is quoted if it contains spaces
+        const fontFamily = layer.fontFamily.includes(" ") ? `"${layer.fontFamily}"` : layer.fontFamily;
+        ctx.font = `${layer.fontWeight} ${fontSize}px ${fontFamily}, sans-serif`;
         ctx.fillStyle = layer.color;
         ctx.textAlign = layer.textAlign;
         ctx.textBaseline = "middle";
 
         if (layer.shadow) {
           ctx.shadowColor = "rgba(0,0,0,0.8)";
-          ctx.shadowBlur = 10;
+          ctx.shadowBlur = 12;
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
         } else {
@@ -221,11 +229,8 @@ self.onmessage = async (e) => {
         const y = (layer.y / 100) * outputSize.height;
 
         ctx.fillText(layer.text, x, y);
-        
-        // Reset shadow for next layer
-        ctx.shadowColor = "transparent";
-        ctx.shadowBlur = 0;
       });
+      ctx.restore();
     }
 
     // Draw Watermark
